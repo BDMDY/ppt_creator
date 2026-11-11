@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MDY Presentaciones</title>
+<style>/*__ESTILOS__*/</style>
+</head>
+<body>
+<header class="top">
+  <div>
+    <div class="k">CUSTOMER EXPERIENCE · HERRAMIENTA SEMANAL</div>
+    <h1>Armado de presentación de indicadores</h1>
+  </div>
+  <div class="marca">MDY<small>CUSTOMER EXPERIENCE</small></div>
+</header>
+<nav class="tabs" id="tabs">
+  <button data-tab="cargar" class="on"><span class="n">1</span>Cargar datos</button>
+  <button data-tab="manual"><span class="n">2</span>Registro manual</button>
+  <button data-tab="revisar"><span class="n">3</span>Revisar láminas</button>
+  <button data-tab="descargar"><span class="n">4</span>Descargar PPT</button>
+</nav>
+<main>
+  <!-- ============ 1. CARGAR ============ -->
+  <section class="tab on" id="tab-cargar">
+    <div class="card">
+      <h2>Arrastra aquí los reportes de la semana</h2>
+      <p class="ayuda">Puedes soltar todos los archivos juntos. La herramienta reconoce sola cada reporte: operación mensual y diaria (Premium / Full Claro), rellamadas y oportunidades CT. Los datos quedan guardados en este navegador y se van acumulando como histórico; no se envían a ningún lado.</p>
+      <div class="drop" id="drop">
+        <p><b>Suelta aquí los archivos .xlsx</b> o haz clic para buscarlos</p>
+        <p class="muted">data (xx).xlsx · OPORTUNIDADES_FC_PREMIUM_MDY_….xlsx</p>
+        <input type="file" id="archivos" multiple accept=".xlsx,.xls,.csv" style="display:none">
+      </div>
+      <div id="resultadoCarga" style="margin-top:14px"></div>
+    </div>
+    <div class="card">
+      <h2>Datos disponibles</h2>
+      <p class="ayuda">Qué hay cargado por campaña. Si un reporte falta, la lámina correspondiente no se genera.</p>
+      <div id="estadoDatos"></div>
+    </div>
+    <div class="card">
+      <h2>Historial de cargas</h2>
+      <div id="historial"></div>
+    </div>
+  </section>
+
+  <!-- ============ 2. MANUAL ============ -->
+  <section class="tab" id="tab-manual">
+    <div class="sub" id="subManual">
+      <button data-sub="hc" class="on">Headcount</button>
+      <button data-sub="ret">Retención</button>
+      <button data-sub="comp">Compromisos</button>
+      <button data-sub="casos">Casos operativos</button>
+      <button data-sub="ases">Asesores</button>
+      <button data-sub="obj">Objetivos</button>
+    </div>
+    <div class="subsec on" id="sub-hc"></div>
+    <div class="subsec" id="sub-ret"></div>
+    <div class="subsec" id="sub-comp"></div>
+    <div class="subsec" id="sub-casos"></div>
+    <div class="subsec" id="sub-ases"></div>
+    <div class="subsec" id="sub-obj"></div>
+  </section>
+
+  <!-- ============ 3. REVISAR ============ -->
+  <section class="tab" id="tab-revisar">
+    <div class="card">
+      <div class="fila">
+        <label>Mes a presentar <select id="selMes"></select></label>
+        <label>Fecha de corte ("Actualizado al") <input type="date" id="fechaCorte"></label>
+        <label>Campaña <select id="selCamp"><option value="todas">Ambas</option><option value="premium">Premium</option><option value="fullclaro">Full Claro</option></select></label>
+      </div>
+      <p class="ayuda" style="margin-top:10px">Origen y Resultado vienen redactados automáticamente desde los datos; edítalos con tu criterio. La Acción se copia del mes anterior para que solo la actualices. Todo se guarda solo.</p>
+    </div>
+    <div id="laminas"></div>
+  </section>
+
+  <!-- ============ 4. DESCARGAR ============ -->
+  <section class="tab" id="tab-descargar">
+    <div class="card paso-final">
+      <h2 style="font-size:20px">Generar presentación</h2>
+      <p id="resumenGen"></p>
+      <div class="fila" style="justify-content:center;margin:14px 0">
+        <label class="check"><input type="checkbox" data-sec="resumen" checked> Resumen ejecutivo</label>
+        <label class="check"><input type="checkbox" data-sec="premium" checked> Premium</label>
+        <label class="check"><input type="checkbox" data-sec="fullclaro" checked> Full Claro</label>
+        <label class="check"><input type="checkbox" data-sec="compromisos" checked> Compromisos</label>
+        <label class="check"><input type="checkbox" data-sec="casos" checked> Casos operativos</label>
+      </div>
+      <div class="fila" style="justify-content:center;margin-bottom:18px">
+        <label>Próximo corte (lámina de compromisos) <input type="text" id="proxCorte" placeholder="semana del 16 de noviembre" style="width:260px"></label>
+      </div>
+      <button class="b grande" id="btnGenerar">⬇ Descargar PPT</button>
+      <p class="muted" style="margin-top:12px">Se descarga un .pptx editable: gráficos nativos de PowerPoint (clic derecho → Editar datos).</p>
+    </div>
+    <div class="card">
+      <h2>Respaldo de la información</h2>
+      <p class="ayuda">Todo vive en este navegador. Descarga un respaldo cada cierto tiempo (o para pasar la información a otra computadora) y restáuralo cuando lo necesites.</p>
+      <div class="fila">
+        <button class="b2" id="btnExportar">Descargar respaldo (.json)</button>
+        <button class="b2" id="btnImportar">Restaurar respaldo</button>
+        <input type="file" id="archivoRespaldo" accept=".json" style="display:none">
+        <button class="b2" id="btnBorrar" style="color:#c0392b;border-color:#c0392b">Borrar todo</button>
+      </div>
+    </div>
+  </section>
+</main>
+<div class="toast" id="toast"></div>
+<script>/*__LIBS__*/</script>
+<script>/*__ASSETS__*/</script>
+<script>/*__CORE__*/</script>
+<script>/*__DECK__*/</script>
+<script>/*__APP__*/</script>
+</body>
+</html>
