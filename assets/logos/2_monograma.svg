@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256">
+  <rect width="256" height="256" rx="56" fill="#18261E"/>
+  <text x="128" y="138" text-anchor="middle" font-family="Arial Black, Arial, sans-serif" font-weight="900" font-size="84" fill="#fff" letter-spacing="-4">MDY</text>
+  <rect x="46" y="160" width="164" height="12" rx="6" fill="#2B3A31"/>
+  <rect x="46" y="160" width="118" height="12" rx="6" fill="#05BC57"/>
+  <text x="128" y="204" text-anchor="middle" font-family="Arial, sans-serif" font-weight="700" font-size="20" fill="#CFEBDC" letter-spacing="4">SLIDES</text>
+</svg>
