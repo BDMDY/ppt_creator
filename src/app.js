@@ -365,10 +365,10 @@
     }).join('');
     const pit = p ? `<div class="pitch"><b>Escenario:</b> <span class="pill ${p.color}">${esc(p.nombreEscenario)}</span>
         <div class="msg" style="margin-top:4px">${esc(p.mensaje)}</div>
-        <ol>${p.pasos.map((x) => `<li>${esc(x)}</li>`).join('')}</ol>
+        ${p.secuencia.map((b, i) => `<div class="eb ${b.tipo}"><b>${i + 1}. ${b.tipo}</b> <span class="muted">${esc(b.queEs)}</span><ul>${b.puntos.map((x) => `<li>${esc(x)}</li>`).join('')}</ul></div>`).join('')}
         <div class="muted"><b>Preguntas probables:</b> ${p.preguntas.map(esc).join(' · ')}</div></div>` : '';
     return `<div class="coach"><div><h4>ACCIONES SUGERIDAS</h4>${sug || '<span class="muted">Sin sugerencias para este escenario.</span>'}</div>
-      <div><h4>CÓMO EXPONERLO (va en las notas del orador)</h4>${pit}</div></div>`;
+      <div><h4>CÓMO EXPONERLO · ETHOS · PATHOS · LOGOS (va en el guion)</h4>${pit}</div></div>`;
   }
 
   function pintarRevisar() {
@@ -477,7 +477,7 @@
     const secciones = {}; $$('[data-sec]').forEach((x) => (secciones[x.dataset.sec] = x.checked));
     const btn = $('#btnGenerar'); btn.disabled = true; btn.textContent = 'Generando…';
     try {
-      const pptx = DECK.generar(window.PptxGenJS, MDY.recortar(estado, estado.corte.fecha), { notas: $('#chkNotas').checked, mes, fechaCorte: estado.corte.fecha, assets: window.MDY_ASSETS || {}, proxCorte: estado.corte.proxCorte, secciones });
+      const pptx = DECK.generar(window.PptxGenJS, MDY.recortar(estado, estado.corte.fecha), { notas: false, mes, fechaCorte: estado.corte.fecha, assets: window.MDY_ASSETS || {}, proxCorte: estado.corte.proxCorte, secciones });
       const buf = await pptx.write({ outputType: 'arraybuffer' });
       // Re-empaquetar sin entradas de carpeta (mejor compatibilidad con OneDrive/SharePoint)
       const zin = await JSZip.loadAsync(buf), zout = new JSZip();
@@ -486,18 +486,20 @@
       const blob = await zout.generateAsync({ type: 'blob', compression: 'DEFLATE', mimeType: 'application/vnd.openxmlformats-officedocument.presentationml.presentation' });
       const f = estado.corte.fecha ? estado.corte.fecha.split('-').reverse().slice(0, 2).join('.') : U.mesLabel(mes);
       descargar(blob, `PRESENTACION_MDY_${f}.pptx`);
-      aviso('Presentación descargada');
+      if ($('#chkNotas').checked) setTimeout(descargarGuion, 600);
+      aviso($('#chkNotas').checked ? 'Presentación y guion de exposición descargados' : 'Presentación descargada');
     } catch (e) { console.error(e); aviso('Error al generar: ' + e.message); }
     btn.disabled = false; btn.textContent = '⬇ Descargar PPT';
   });
-  $('#btnGuion').addEventListener('click', () => {
+  $('#btnGuion').addEventListener('click', () => descargarGuion());
+  function descargarGuion() {
     const mes = estado.corte.mes || mesesSeleccionables()[0];
     if (!mes) { aviso('Primero carga los reportes'); return; }
     const html = window.MDY_COACH.guionHTML(MDY.recortar(estado, estado.corte.fecha), mes, estado.corte.fecha, window.PULSO_CREDITOS);
     const f = estado.corte.fecha ? estado.corte.fecha.split('-').reverse().slice(0, 2).join('.') : U.mesLabel(mes);
     descargar(new Blob([html], { type: 'text/html' }), `GUION_EXPOSICION_${f}.html`);
     aviso('Guion descargado (ábrelo en el navegador o imprímelo en PDF)');
-  });
+  }
   function descargar(blob, nombre) {
     const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = nombre;
     document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1000);

@@ -143,69 +143,137 @@
     hc: ['¿Cuándo se cierran las vacantes?', '¿Qué turno está más descubierto?'],
   };
 
+  /* Impacto en las personas (PATHOS): traduce el indicador a clientes / equipo */
+  function impacto(estado, camp, ind, mes, e) {
+    const positivo = e.id === 'logro' || e.id === 'avance';
+    if (ind === 'ns') {
+      const m = MDY.opsMes(estado, camp, mes);
+      if (!m) return null;
+      const noAt = m.rec - m.umbral;
+      return positivo
+        ? `${U.num(m.umbral)} clientes fueron atendidos a tiempo este mes; detrás del número hay un equipo que sostuvo la cobertura.`
+        : `${U.num(m.aband)} clientes colgaron sin ser atendidos y ${U.num(noAt)} esperaron más de lo comprometido: es la primera experiencia que se llevan de nosotros.`;
+    }
+    if (ind === 'tmg') {
+      const m = MDY.opsMes(estado, camp, mes); if (!m) return null;
+      const extra = Math.round(m.tmg - e.obj);
+      return extra > 0
+        ? `Cada cliente pasa en promedio ${extra} s más al teléfono de lo previsto (${U.num((extra * (m.rec - m.aband)) / 3600)} horas del cliente en el mes); también es tiempo de cola para el siguiente.`
+        : 'El cliente resuelve en menos tiempo: menos espera para todos los que están en cola.';
+    }
+    if (ind === 'rell') {
+      const r = MDY.rellMes(estado, camp, mes); if (!r) return null;
+      return `${U.num(r.rell)} veces un cliente tuvo que volver a llamar porque su caso no quedó resuelto: ${positivo ? 'cada punto que bajamos es un cliente que no repite la molestia.' : 'es esfuerzo doble para él y para el equipo.'}`;
+    }
+    if (ind === 'ct') {
+      const a = MDY.ctMes(estado, camp, mes); if (!a) return null;
+      return positivo
+        ? `${U.num(a.c)} clientes ya migraron a una mejor tecnología gracias al ofrecimiento del equipo.`
+        : `${U.num(a.g - a.c)} clientes que podían migrar a una mejor tecnología se fueron sin la oferta: es servicio que dejamos de darles (y comisión que el equipo deja de ganar).`;
+    }
+    if (ind === 'ret') {
+      if (e.valor == null) return null;
+      return `De cada 100 clientes que llaman para irse, hoy retenemos ${Math.round(e.valor * 100)}${positivo ? ': el equipo está convenciendo a más clientes de quedarse.' : '; cada punto son clientes que se pierden.'}`;
+    }
+    if (ind === 'hc') {
+      const h = MDY.headcountResumen(estado, camp);
+      return h.cumpl != null && h.cumpl < 1
+        ? `El equipo opera con el ${U.pct(h.cumpl, 0)} de la dotación: la carga extra la absorben las personas que sí están (y se nota en ausentismo y rotación).`
+        : 'El equipo está completo: es la base para sostener los indicadores.';
+    }
+    return null;
+  }
+
+  // Orden retórico recomendado según el escenario
+  const ORDEN = {
+    logro: ['PATHOS', 'LOGOS', 'ETHOS', 'PROPUESTA'],
+    sostener: ['LOGOS', 'ETHOS', 'PATHOS', 'PROPUESTA'],
+    avance: ['LOGOS', 'ETHOS', 'PATHOS', 'PROPUESTA'],
+    alerta: ['ETHOS', 'LOGOS', 'PATHOS', 'PROPUESTA'],
+    estable: ['LOGOS', 'PATHOS', 'ETHOS', 'PROPUESTA'],
+  };
+  const QUE_ES = {
+    ETHOS: 'Credibilidad: quién eres, qué asumes y qué ya hiciste',
+    PATHOS: 'Emoción: el impacto en clientes y equipo',
+    LOGOS: 'Lógica: el dato, la causa y la tendencia',
+    PROPUESTA: 'Cierre: qué propones y qué necesitas',
+  };
+
   function pitch(estado, camp, ind, mes, textos) {
     const e = escenario(estado, camp, ind, mes);
     if (!e) return null;
     const esc = ESCENARIOS[e.id];
     const nombre = `${NOMBRE[ind]} ${MDY.CAMPANAS[camp].nombre}`;
-    const pasos = [];
+    const acciones = String((textos && textos.accion) || '').split('\n').map((x) => x.trim()).filter(Boolean);
+    const hallazgos = String((textos && textos.origen) || '').split('\n').map((x) => x.trim()).filter(Boolean);
+    const comp = (estado.manual.compromisos || []);
+    const cerrados = comp.filter((c) => c.estado === 'Cerrado').length;
+    const sug = accionesSugeridas(estado, camp, ind, mes);
+
+    // LOGOS
+    const logos = [];
     if (ind === 'hc') {
       const h = MDY.headcountResumen(estado, camp);
-      pasos.push(`Abre con la foto: ${h.operadores ?? 's/d'} operadores, ${h.cumpl != null ? U.pct(h.cumpl) : 's/d'} del dimensionado.`);
-      pasos.push('Recorre la línea de tiempo: qué movimientos ya se cerraron y cuáles siguen pendientes.');
-      pasos.push('Cierra con el impacto en cobertura por turno y lo que necesitas (ingresos, traslados, fechas).');
+      logos.push(`${h.operadores ?? 's/d'} operadores, ${h.cumpl != null ? U.pct(h.cumpl) : 's/d'} del headcount dimensionado${h.vac > 0 ? `; vacante de ${U.num(h.vac, 1)} FTE` : ''}.`);
     } else {
-      const titular = `${nombre}: ${fmt(ind, e.valor)} vs objetivo ${ind === 'tmg' ? U.seg(e.obj) : U.pct(e.obj, 0)}${e.prev != null ? ` (${delta(ind, e.valor, e.prev)} vs ${U.mesNombre(U.mesAnterior(mes)).toLowerCase()})` : ''}.`;
-      if (e.id === 'logro') {
-        pasos.push(`Titular: ${titular} Dilo primero, en una frase.`);
-        pasos.push('Atribuye el resultado a las acciones concretas (nombra 1 o 2 de la sección ACCIÓN) y al equipo responsable.');
-        pasos.push('Muestra que es sostenible: evolución semanal estable y el riesgo que vas a vigilar.');
-        pasos.push('Pedido: mantener los recursos/condiciones que hicieron posible el resultado.');
-      } else if (e.id === 'sostener') {
-        pasos.push(`Titular: ${titular}`);
-        pasos.push('Reconoce la señal antes de que te la señalen: "seguimos en objetivo, pero estamos perdiendo margen".');
-        pasos.push('Explica la causa con un dato del ORIGEN (día, franja o semana que explica el retroceso).');
-        pasos.push('Compromiso preventivo: acción con responsable y fecha para no salir del objetivo.');
-      } else if (e.id === 'avance') {
-        pasos.push(`Titular: ${titular}`);
-        pasos.push(`Enfoca la tendencia: la brecha se redujo; ${e.proy ? `al ritmo actual alcanzamos el objetivo en ~${e.proy} mes(es)` : 'muestra la evolución semanal como prueba'}.`);
-        pasos.push('Conecta la mejora con las acciones ejecutadas (evidencia de que el plan funciona).');
-        pasos.push('Cierra con lo que falta para cerrar la brecha y el próximo hito medible.');
-      } else if (e.id === 'alerta') {
-        pasos.push(`Titular sin rodeos: ${titular}`);
-        pasos.push('Causa raíz con datos: usa 1 o 2 hallazgos del ORIGEN (cobertura, día crítico, franja, asesores).');
-        pasos.push('Plan de acción con dueño, fecha y meta medible para el próximo corte (evita acciones genéricas).');
-        pasos.push('Pedido explícito: qué necesitas del directorio (personal, horarios, decisión del cliente).');
-      } else {
-        pasos.push(`Titular: ${titular}`);
-        pasos.push('Muestra la evolución semanal para dar contexto.');
-        pasos.push('Cierra con la acción principal y el resultado esperado al próximo corte.');
-      }
+      logos.push(`${nombre}: ${fmt(ind, e.valor)} vs objetivo ${ind === 'tmg' ? U.seg(e.obj) : U.pct(e.obj, 0)}${e.prev != null ? ` (${delta(ind, e.valor, e.prev)} vs ${U.mesNombre(U.mesAnterior(mes)).toLowerCase()})` : ''}.`);
     }
-    const hallazgos = String((textos && textos.origen) || '').split('\n').filter(Boolean).slice(0, 2);
+    hallazgos.slice(1, 3).forEach((h) => logos.push(h));
+    if (e.id === 'avance' && e.proy) logos.push(`Al ritmo actual alcanzamos el objetivo en ~${e.proy} mes(es).`);
+
+    // ETHOS
+    const ethos = [];
+    if (e.id === 'alerta') ethos.push('Asume la brecha en primera persona y sin rodeos: "No estamos donde nos comprometimos y estos son los motivos".');
+    if (e.id === 'sostener') ethos.push('Anticípate al directorio: "Seguimos en objetivo, pero ya detectamos la señal y estamos actuando".');
+    if (e.id === 'logro') ethos.push('Atribuye el resultado al equipo y a decisiones concretas, no a la suerte.');
+    if (e.id === 'avance') ethos.push('Muestra que el plan funciona: la mejora es consecuencia de lo que se ejecutó.');
+    if (acciones.length) ethos.push(`Lo que ya hicimos: ${acciones.slice(0, 2).join(' / ')}`);
+    else ethos.push('Menciona 1 o 2 acciones ya ejecutadas con fecha (completa la sección ACCIÓN).');
+    if (comp.length) ethos.push(`Cumplimiento de compromisos: ${cerrados} de ${comp.length} cerrados desde el último corte.`);
+
+    // PATHOS
+    const pathos = [];
+    const imp = impacto(estado, camp, ind, mes, e);
+    if (imp) pathos.push(imp);
+    if (e.id === 'logro') pathos.push('Reconoce con nombre a las personas o equipos que lo hicieron posible.');
+    if (e.id === 'alerta') pathos.push('Habla del cliente antes que del indicador: lo que vivió es lo que hay que cambiar.');
+
+    // PROPUESTA
+    const prop = [];
+    if (e.id === 'logro') prop.push('Pide mantener las condiciones (recursos, horarios, foco) que generaron el resultado.');
+    if (e.id === 'sostener') prop.push(`Acción preventiva con responsable y fecha${sug[0] ? `: ${sug[0].texto}` : '.'}`);
+    if (e.id === 'avance') prop.push(`Siguiente hito medible para el próximo corte${sug[0] ? `; reforzar con: ${sug[0].texto}` : '.'}`);
+    if (e.id === 'alerta') {
+      prop.push(`Plan con dueño, fecha y meta medible${sug[0] ? `: ${sug[0].texto}` : '.'}`);
+      prop.push('Pedido explícito al directorio: qué decisión o recurso necesitas para cerrar la brecha.');
+    }
+    if (e.id === 'estable') prop.push('Acción principal y resultado esperado al próximo corte.');
+
+    const bloques = { LOGOS: logos, ETHOS: ethos, PATHOS: pathos, PROPUESTA: prop };
+    const secuencia = ORDEN[e.id].map((k) => ({ tipo: k, queEs: QUE_ES[k], puntos: bloques[k] })).filter((b) => b.puntos.length);
     return {
-      escenario: e.id, nombreEscenario: esc.nombre, color: esc.color, mensaje: esc.mensaje,
-      pasos, preguntas: PREGUNTAS[ind] || [], hallazgos, proy: e.proy,
+      escenario: e.id, nombreEscenario: esc.nombre, color: esc.color, mensaje: esc.mensaje, titulo: nombre,
+      secuencia, preguntas: PREGUNTAS[ind] || [], proy: e.proy,
     };
   }
 
   function notasLamina(p) {
     if (!p) return '';
     return [
-      `ESCENARIO: ${p.nombreEscenario.toUpperCase()} — ${p.mensaje}`,
+      `${p.titulo.toUpperCase()} — ESCENARIO: ${p.nombreEscenario.toUpperCase()}`,
+      p.mensaje,
       '',
-      'CÓMO EXPONERLO:',
-      ...p.pasos.map((x, i) => `${i + 1}. ${x}`),
-      ...(p.hallazgos.length ? ['', 'DATOS DE RESPALDO:', ...p.hallazgos.map((x) => `• ${x}`)] : []),
+      ...p.secuencia.flatMap((b, i) => [`${i + 1}. ${b.tipo} (${b.queEs})`, ...b.puntos.map((x) => `   • ${x}`)]),
       '',
-      'PREGUNTAS PROBABLES (prepara la respuesta):',
-      ...p.preguntas.map((x) => `• ${x}`),
+      'PREGUNTAS PROBABLES:',
+      ...p.preguntas.map((x) => `   • ${x}`),
     ].join('\n');
   }
 
   function guionHTML(estado, mes, fechaCorte, creditos) {
     const esc = (s) => String(s == null ? '' : s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
     const colores = { VERDE: ['#d4edda', '#1e8e4e'], AMBAR: ['#fdf1de', '#b8730f'], ROJO: ['#f8e1e1', '#c0392b'] };
+    const colTipo = { ETHOS: '#2e6da4', PATHOS: '#b8456b', LOGOS: '#007640', PROPUESTA: '#7a5208' };
     let html = '';
     for (const camp of ['premium', 'fullclaro']) {
       let bloque = '';
@@ -217,11 +285,10 @@
         const enPlan = String(t.accion || '').split('\n').map((x) => x.trim());
         const acc = accionesSugeridas(estado, camp, ind, mes).filter((a) => !enPlan.includes(a.texto));
         const [bg, fg] = colores[p.color];
-        bloque += `<section><h3>${esc(NOMBRE[ind])} <span style="background:${bg};color:${fg}">${esc(p.nombreEscenario)}</span></h3>
+        bloque += `<section><h3>${esc(NOMBRE[ind])} <span class="esc" style="background:${bg};color:${fg}">${esc(p.nombreEscenario)}</span></h3>
           <p class="msg">${esc(p.mensaje)}</p>
-          <ol>${p.pasos.map((x) => `<li>${esc(x)}</li>`).join('')}</ol>
-          ${t.accion ? `<h4>Plan de acción (lámina)</h4><ul>${t.accion.split('\n').filter(Boolean).map((x) => `<li>${esc(x)}</li>`).join('')}</ul>` : ''}
-          ${acc.length ? `<h4>Acciones sugeridas por Pulso CX</h4><ul>${acc.map((a) => `<li>${esc(a.texto)} <em>(${esc(a.porque)})</em></li>`).join('')}</ul>` : ''}
+          ${p.secuencia.map((b, i) => `<div class="b"><div class="t" style="color:${colTipo[b.tipo]}">${i + 1}. ${b.tipo} <small>· ${esc(b.queEs)}</small></div><ul>${b.puntos.map((x) => `<li>${esc(x)}</li>`).join('')}</ul></div>`).join('')}
+          ${acc.length ? `<h4>Otras acciones sugeridas</h4><ul>${acc.map((a) => `<li>${esc(a.texto)} <em>(${esc(a.porque)})</em></li>`).join('')}</ul>` : ''}
           <h4>Preguntas probables</h4><ul>${p.preguntas.map((x) => `<li>${esc(x)}</li>`).join('')}</ul></section>`;
       }
       if (bloque) html += `<h2>${esc(MDY.CAMPANAS[camp].nombre)}</h2>${bloque}`;
@@ -230,11 +297,14 @@
     return `<!DOCTYPE html><html lang="es"><head><meta charset="utf-8"><title>Guion de exposición · ${esc(U.mesLargo(mes))}</title>
 <style>body{font-family:Arial,sans-serif;color:#18261e;max-width:900px;margin:30px auto;padding:0 20px;line-height:1.45}
 h1{color:#007640;margin-bottom:4px}h2{background:#007640;color:#fff;padding:8px 14px;border-radius:6px;margin-top:34px}
-h3{margin:22px 0 4px}h3 span{font-size:12px;padding:3px 10px;border-radius:10px;margin-left:8px;vertical-align:middle}
-h4{margin:12px 0 4px;color:#007640;font-size:13px;text-transform:uppercase;letter-spacing:.4px}.msg{color:#5a6d62;font-style:italic;margin:2px 0 8px}
+h3{margin:22px 0 4px}.esc{font-size:12px;padding:3px 10px;border-radius:10px;margin-left:8px;vertical-align:middle}
+h4{margin:12px 0 4px;color:#5a6d62;font-size:12px;text-transform:uppercase;letter-spacing:.4px}.msg{color:#5a6d62;font-style:italic;margin:2px 0 8px}
+.b{margin:8px 0}.b .t{font-weight:bold;font-size:13.5px}.b .t small{font-weight:normal;color:#5a6d62}.b ul{margin:4px 0}
+.leyenda{background:#f5f8f5;border:1px solid #dde6de;border-radius:6px;padding:10px 14px;font-size:13px;margin-top:14px}
 section{border-bottom:1px solid #dde6de;padding-bottom:12px}em{color:#5a6d62}.pie{color:#5a6d62;font-size:12px;margin-top:30px}
-@media print{h2{-webkit-print-color-adjust:exact;print-color-adjust:exact}section{break-inside:avoid}}</style></head><body>
+@media print{h2,.esc{-webkit-print-color-adjust:exact;print-color-adjust:exact}section{break-inside:avoid}}</style></head><body>
 <h1>Guion de exposición</h1><div>${esc(U.mesLargo(mes))} · información al ${fechaCorte ? U.ddmmyyyy(fechaCorte) : '—'}</div>
+<div class="leyenda"><b>Esquema Ethos · Pathos · Logos.</b> <b style="color:${colTipo.ETHOS}">Ethos</b>: credibilidad (asumir, mostrar lo hecho). <b style="color:${colTipo.PATHOS}">Pathos</b>: impacto en clientes y equipo. <b style="color:${colTipo.LOGOS}">Logos</b>: datos, causa y tendencia. El orden cambia según el escenario: en <b>Alerta</b> se abre con Ethos (asumir la brecha); en <b>Logro</b> con Pathos (reconocer al equipo); en <b>Recuperación</b> y <b>Cumple con alerta</b> con Logos (la tendencia). Siempre se cierra con una <b>Propuesta</b>.</div>
 ${html}<p class="pie">Generado con ${esc(cr.app || 'Pulso CX')}${cr.autor ? ' · Desarrollado por ' + esc(cr.autor) : ''}</p></body></html>`;
   }
 

@@ -114,3 +114,5 @@ button.grande { font-size: 17px; padding: 14px 28px; }
 .coach .pitch { background: #f7faf8; border: 1px solid var(--borde); border-radius: 6px; padding: 10px 12px; font-size: 12.5px; }
 .coach .pitch ol { margin: 6px 0; padding-left: 18px; } .coach .pitch li { margin-bottom: 3px; }
 .coach .pitch .msg { color: var(--gris); font-style: italic; }
+.coach .eb { margin: 6px 0; } .coach .eb ul { margin: 2px 0 0; padding-left: 18px; }
+.coach .eb.ETHOS > b { color: #2e6da4; } .coach .eb.PATHOS > b { color: #b8456b; } .coach .eb.LOGOS > b { color: #007640; } .coach .eb.PROPUESTA > b { color: #7a5208; }

@@ -24,8 +24,8 @@ Dos formas de usarla (mismo contenido, sin internet ni Claude; los datos no sale
    - **Retención:** % de retención y cancelación de cada mes (lo que comparte el cliente).
    - **Compromisos**, **Casos operativos**, **Asesores** (código → nombre) y **Objetivos**.
 3. **Revisar láminas** — Origen y Resultado vienen redactados automáticamente desde los datos (desviaciones, tendencias, días críticos, cruces entre indicadores, brechas por asesor y por franja). Edítalos con tu criterio; la Acción se arrastra del mes anterior. Puedes forzar el semáforo y apagar láminas.
-   Debajo de cada lámina, **Acciones sugeridas** (según los datos: cobertura, fines de semana, franjas, asesores, motivos…) que se agregan al plan con un clic, y **Cómo exponerlo**: el escenario (Logro, Cumple con alerta, En recuperación, Alerta) con el pitch paso a paso y las preguntas probables.
-4. **Descargar PPT** — genera el `.pptx` editable (gráficos nativos de PowerPoint) con el guion de exposición en las **notas del orador**. También puedes descargar el **guion de exposición** completo (HTML imprimible).
+   Debajo de cada lámina, **Acciones sugeridas** (según los datos: cobertura, fines de semana, franjas, asesores, motivos…) que se agregan al plan con un clic, y **Cómo exponerlo**: el escenario (Logro, Cumple con alerta, En recuperación, Alerta) con un pitch en esquema **Ethos · Pathos · Logos** (el orden cambia según el escenario), una propuesta de cierre y las preguntas probables.
+4. **Descargar PPT** — genera el `.pptx` editable (gráficos nativos de PowerPoint) y, en un **archivo aparte**, el guion de exposición (HTML imprimible / PDF).
 
 > Los datos se guardan en el navegador. Usa **Descargar respaldo** de vez en cuando y **Restaurar respaldo** si cambias de computadora o se limpia el navegador.
 
@@ -40,7 +40,7 @@ Dos formas de usarla (mismo contenido, sin internet ni Claude; los datos no sale
 
 ```bash
 npm install          # pptxgenjs + xlsx (se incrustan en el HTML)
-node build.js        # genera dist/MDY_Presentaciones.html
+node build.js        # genera dist/PulsoCX.html
 node test/generar.js salida.pptx <reportes.xlsx...>   # prueba sin navegador
 node test/e2e.js <carpeta> <reportes.xlsx...>          # prueba completa en Chromium (Playwright)
 ```
