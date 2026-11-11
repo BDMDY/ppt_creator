@@ -3,16 +3,24 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>MDY Presentaciones</title>
+<title>Pulso CX</title>
+<link rel="icon" href="data:image/svg+xml,__FAVICON__">
 <style>/*__ESTILOS__*/</style>
 </head>
 <body>
-<header class="top">
-  <div>
-    <div class="k">CUSTOMER EXPERIENCE · HERRAMIENTA SEMANAL</div>
-    <h1>Armado de presentación de indicadores</h1>
+<div id="splash" class="splash" role="presentation">
+  <div class="splash-in">
+    <svg class="logo grande" viewBox="0 0 256 256" aria-hidden="true"><rect width="256" height="256" rx="56" fill="#007640"/><rect x="36" y="56" width="184" height="130" rx="14" fill="#fff"/><polyline class="pulso" points="54,128 88,128 102,100 118,158 138,78 154,128 200,128" fill="none" stroke="#007640" stroke-width="12" stroke-linecap="round" stroke-linejoin="round"/><circle class="punto" cx="200" cy="128" r="9" fill="#05BC57"/><path d="M128 186 L128 206 M100 210 L156 210" stroke="#fff" stroke-width="10" stroke-linecap="round"/></svg>
+    <div class="splash-nombre">Pulso <span>CX</span></div>
+    <div class="splash-lema">Tus indicadores, listos para presentar</div>
+    <div class="splash-cred" id="splashCred"></div>
   </div>
-  <div class="marca">MDY<small>CUSTOMER EXPERIENCE</small></div>
+</div>
+<header class="top">
+  <div class="marca-app">
+    <svg class="logo" viewBox="0 0 256 256" aria-hidden="true"><rect width="256" height="256" rx="56" fill="#007640"/><rect x="36" y="56" width="184" height="130" rx="14" fill="#fff"/><polyline class="pulso" points="54,128 88,128 102,100 118,158 138,78 154,128 200,128" fill="none" stroke="#007640" stroke-width="12" stroke-linecap="round" stroke-linejoin="round"/><circle class="punto" cx="200" cy="128" r="9" fill="#05BC57"/><path d="M128 186 L128 206 M100 210 L156 210" stroke="#fff" stroke-width="10" stroke-linecap="round"/></svg>
+    <div><h1>Pulso <span>CX</span></h1><div class="k">Armado de presentación de indicadores</div></div>
+  </div>
 </header>
 <nav class="tabs" id="tabs">
   <button data-tab="cargar" class="on"><span class="n">1</span>Cargar datos</button>
@@ -105,7 +113,9 @@
     </div>
   </section>
 </main>
+<footer class="creditos" id="creditos"></footer>
 <div class="toast" id="toast"></div>
+<script>/*__CREDITOS__*/</script>
 <script>/*__LIBS__*/</script>
 <script>/*__ASSETS__*/</script>
 <script>/*__CORE__*/</script>

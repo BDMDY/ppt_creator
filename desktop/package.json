@@ -1,0 +1,39 @@
+{
+  "name": "pulso-cx",
+  "productName": "Pulso CX",
+  "version": "1.0.0",
+  "description": "Pulso CX - Armado de presentación de indicadores",
+  "author": "Piero Marcelo Mavila Peña",
+  "main": "main.js",
+  "scripts": {
+    "preparar": "node ../build.js && node -e \"require('fs').copyFileSync('../dist/PulsoCX.html','app.html')\"",
+    "portable": "npm run preparar && electron-builder --win portable --x64"
+  },
+  "build": {
+    "appId": "pe.pulsocx.app",
+    "productName": "Pulso CX",
+    "copyright": "© 2026 Piero Marcelo Mavila Peña",
+    "files": [
+      "main.js",
+      "app.html",
+      "build/icon.png"
+    ],
+    "directories": {
+      "output": "release"
+    },
+    "win": {
+      "target": "portable",
+      "icon": "build/icon.ico",
+      "signAndEditExecutable": false
+    },
+    "portable": {
+      "artifactName": "PulsoCX_${version}_portable.exe"
+    },
+    "afterPack": "build/afterPack.js"
+  },
+  "devDependencies": {
+    "electron": "33.4.11",
+    "electron-builder": "25.1.8",
+    "resedit": "^2.0.3"
+  }
+}

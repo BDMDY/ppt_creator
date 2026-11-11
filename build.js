@@ -18,9 +18,12 @@ const assets = 'window.MDY_ASSETS = ' + JSON.stringify({
   logoChico: 'image/png;base64,' + b64('assets/logo_chico.png'),
 }) + ';';
 
-let html = r('src/index.html');
+const creditos = JSON.parse(r('src/creditos.json'));
+const favicon = encodeURIComponent(r('assets/logos/pulso/B_pulso_slide.svg').replace(/\s+/g, ' ').trim());
+let html = r('src/index.html').replace('__FAVICON__', favicon);
 const partes = {
   '/*__ESTILOS__*/': r('src/styles.css'),
+  '/*__CREDITOS__*/': 'window.PULSO_CREDITOS = ' + JSON.stringify(creditos) + ';',
   '/*__LIBS__*/': seguro(libs),
   '/*__ASSETS__*/': assets,
   '/*__CORE__*/': seguro(r('src/core.js')),
@@ -29,6 +32,6 @@ const partes = {
 };
 for (const [k, v] of Object.entries(partes)) html = html.split(k).join(v);
 fs.mkdirSync(path.join(__dirname, 'dist'), { recursive: true });
-const out = path.join(__dirname, 'dist', 'MDY_Presentaciones.html');
+const out = path.join(__dirname, 'dist', 'PulsoCX.html');
 fs.writeFileSync(out, html);
 console.log('OK', out, (html.length / 1024 / 1024).toFixed(2) + ' MB');

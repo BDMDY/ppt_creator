@@ -10,7 +10,7 @@ const path = require('path');
   const errores = [];
   page.on('pageerror', (e) => errores.push(e.message));
   page.on('console', (m) => { if (m.type() === 'error') errores.push(m.text()); });
-  await page.goto('file://' + path.resolve(__dirname, '../dist/MDY_Presentaciones.html'));
+  await page.goto('file://' + path.resolve(__dirname, '../dist/PulsoCX.html'));
   await page.setInputFiles('#archivos', files);
   await page.waitForSelector('#resultadoCarga table');
   console.log((await page.innerText('#resultadoCarga')).trim());

@@ -481,6 +481,16 @@
   });
 
   function pintarTodo() { pintarCarga(); pintarManual(); }
+
+  /* ------------------------------ créditos y apertura ------------------------------ */
+  const CR = window.PULSO_CREDITOS || { app: 'Pulso CX', version: '', autor: '', cargo: '' };
+  const firma = `Desarrollado por <b>${esc(CR.autor)}</b>${CR.cargo ? ' · ' + esc(CR.cargo) : ''}`;
+  $('#splashCred').innerHTML = firma;
+  $('#creditos').innerHTML = `${esc(CR.app)} ${CR.version ? 'v' + esc(CR.version) : ''} · ${firma} · © ${new Date().getFullYear()}`;
+  const splash = $('#splash');
+  const cerrarSplash = () => { splash.classList.add('fuera'); setTimeout(() => splash.remove(), 700); };
+  splash.addEventListener('click', cerrarSplash);
+  setTimeout(cerrarSplash, matchMedia('(prefers-reduced-motion: reduce)').matches ? 600 : 3300);
   cargarEstado();
   pintarTodo();
   // expuesto para pruebas
