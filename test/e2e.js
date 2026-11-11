@@ -44,6 +44,7 @@ const path = require('path');
   // Revisar
   await page.click('[data-tab=revisar]');
   await page.waitForSelector('#laminas .lam');
+  if (process.env.CORTE) { await page.fill('#fechaCorte', process.env.CORTE); await page.dispatchEvent('#fechaCorte', 'change'); await page.waitForSelector('#laminas .lam'); console.log((await page.innerText('#laminas .info')).trim()); }
   await page.locator('textarea[data-texto="premium.ns"][data-campo=accion]').fill('Cambio de dinámica de alertas en línea.\nProyección diaria de asistencia.');
   await page.locator('input[data-texto="premium.ns"][data-campo=cierreTexto]').fill('Ausentismo de domingos impide cumplir el objetivo.');
   await page.screenshot({ path: out + '/ui3.png', fullPage: false });

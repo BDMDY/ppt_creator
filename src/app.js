@@ -340,15 +340,15 @@
     return (estado.manual.textos[mes][clave] = estado.manual.textos[mes][clave] || {});
   }
 
-  function kpisHTML(c, ind, mes) {
+  function kpisHTML(vista, c, ind, mes) {
     const o = estado.config.objetivos;
     const k = (et, v) => `<div class="k"><span>${et}</span><b>${v}</b></div>`;
-    if (ind === 'ns') { const m = MDY.opsMes(estado, c, mes); return k('NS mensual', U.pct(m && m.ns, 2)) + k('Objetivo', U.pct(o.ns, 0)); }
-    if (ind === 'tmg') { const m = MDY.opsMes(estado, c, mes); return k('TMG mensual', m ? Math.round(m.tmg) + ' s' : 's/d') + k('Objetivo', o.tmg[c] + ' s'); }
-    if (ind === 'rell') { const r = MDY.rellMes(estado, c, mes); return k('Rellamada mensual', U.pct(r && r.pct, 2)) + k('Objetivo', '≤ ' + U.pct(o.rell, 0)); }
-    if (ind === 'ct') { const a = MDY.ctMes(estado, c, mes); return k('Aprovechamiento', a ? U.pct(a.c / a.g) : 's/d') + k('Aprov. / Generadas', a ? `${a.c} / ${a.g}` : 's/d'); }
-    if (ind === 'ret') { const s = MDY.retencionSerie(estado, c, mes, 1); return k('Retención', s.length ? U.pct(s[0].ret) : 's/d') + k('Objetivo', U.pct(o.ret, 0)); }
-    if (ind === 'hc') { const h = MDY.headcountResumen(estado, c); return k('Staff actual', h.operadores != null ? h.operadores + ' operadores' : 's/d') + k('Cumplimiento', h.cumpl != null ? U.pct(h.cumpl) : 's/d'); }
+    if (ind === 'ns') { const m = MDY.opsMes(vista, c, mes); return k('NS mensual', U.pct(m && m.ns, 2)) + k('Objetivo', U.pct(o.ns, 0)); }
+    if (ind === 'tmg') { const m = MDY.opsMes(vista, c, mes); return k('TMG mensual', m ? Math.round(m.tmg) + ' s' : 's/d') + k('Objetivo', o.tmg[c] + ' s'); }
+    if (ind === 'rell') { const r = MDY.rellMes(vista, c, mes); return k('Rellamada mensual', U.pct(r && r.pct, 2)) + k('Objetivo', '≤ ' + U.pct(o.rell, 0)); }
+    if (ind === 'ct') { const a = MDY.ctMes(vista, c, mes); return k('Aprovechamiento', a ? U.pct(a.c / a.g) : 's/d') + k('Aprov. / Generadas', a ? `${a.c} / ${a.g}` : 's/d'); }
+    if (ind === 'ret') { const s = MDY.retencionSerie(vista, c, mes, 1); return k('Retención', s.length ? U.pct(s[0].ret) : 's/d') + k('Objetivo', U.pct(o.ret, 0)); }
+    if (ind === 'hc') { const h = MDY.headcountResumen(vista, c); return k('Staff actual', h.operadores != null ? h.operadores + ' operadores' : 's/d') + k('Cumplimiento', h.cumpl != null ? U.pct(h.cumpl) : 's/d'); }
     return '';
   }
 
@@ -362,15 +362,19 @@
     const mes = estado.corte.mes;
     if (!mes) { $('#laminas').innerHTML = '<div class="aviso">Primero carga los reportes en el paso 1.</div>'; return; }
     const filtro = $('#selCamp').value;
+    const vista = MDY.recortar(estado, estado.corte.fecha);
     let html = '';
+    const ultimo = MDY.ultimaFechaDatos(estado, mes);
+    if (estado.corte.fecha) html += `<div class="info">Se usa la información <b>hasta el ${U.ddmmyyyy(estado.corte.fecha)}</b>${ultimo && ultimo > estado.corte.fecha ? ` (hay datos cargados hasta el ${U.ddmmyyyy(ultimo)} que no se consideran)` : ''}.</div>`;
+    for (const a of vista.avisosCorte || []) html += `<div class="aviso">${esc(a)}</div>`;
     // Resumen ejecutivo
-    const mejoroAuto = DECK.mejorasAuto(estado, mes).join(' ');
+    const mejoroAuto = DECK.mejorasAuto(vista, mes).join(' ');
     const mejoro = (estado.manual.resumen[mes] && estado.manual.resumen[mes].mejoro != null) ? estado.manual.resumen[mes].mejoro : mejoroAuto;
     html += `<div class="lam"><div class="cab"><div class="tit"><small>RESUMEN EJECUTIVO</small>Estado de indicadores · ${U.mesNombre(mes)}</div></div>
       <div class="cuerpo" style="grid-template-columns:1fr">
         <table class="t"><tr><th>Indicador</th>${CAMPS.map((c) => `<th class="c">${MDY.CAMPANAS[c].nombre}</th><th class="c">Estado</th>`).join('')}</tr>
         ${[['ns', 'Nivel de Servicio'], ['tmg', 'TMG'], ['rell', '% Rellamada'], ['ct', 'Oportunidades aprovechadas'], ['ret', 'Tasa de retención']].map(([id, n]) => `<tr><td><b>${n}</b></td>${CAMPS.map((c) => {
-          const v = MDY.valorIndicador(estado, c, id, mes); const t = MDY.textosLamina(estado, mes, c, id); const auto = MDY.semaforo(id, v, estado, c);
+          const v = MDY.valorIndicador(vista, c, id, mes); const t = MDY.textosLamina(vista, mes, c, id); const auto = MDY.semaforo(id, v, estado, c);
           return `<td class="c">${v == null ? 's/d' : id === 'tmg' ? Math.round(v) : U.pct(v)}</td><td class="c"><select data-sem="${c}.${id}"><option value="">Auto${auto ? ': ' + auto : ''}</option>${['VERDE', 'AMBAR', 'ROJO'].map((s) => `<option ${t.semaforo === s ? 'selected' : ''}>${s}</option>`).join('')}</select></td>`;
         }).join('')}</tr>`).join('')}</table>
         <div class="campo" style="margin-top:12px"><div class="et">LO QUE SÍ MEJORÓ ESTA SEMANA <button class="mini" data-restaurar-mejoro>↺ usar sugerencia automática</button></div>
@@ -379,10 +383,10 @@
     for (const c of CAMPS) {
       if (filtro !== 'todas' && filtro !== c) continue;
       for (const ind of MDY.INDICADORES) {
-        const t = MDY.textosLamina(estado, mes, c, ind.id);
+        const t = MDY.textosLamina(vista, mes, c, ind.id);
         const clave = `${c}.${ind.id}`;
-        const datos = ind.id === 'nsdiario' ? MDY.opsDiasMes(estado, c, mes).length > 0 : ind.id === 'ctdet' ? !!MDY.ctMes(estado, c, mes) : DECK.tieneDatos(estado, mes, c, ind.id);
-        const v = MDY.valorIndicador(estado, c, ind.id, mes);
+        const datos = ind.id === 'nsdiario' ? MDY.opsDiasMes(vista, c, mes).length > 0 : ind.id === 'ctdet' ? !!MDY.ctMes(vista, c, mes) : DECK.tieneDatos(vista, mes, c, ind.id);
+        const v = MDY.valorIndicador(vista, c, ind.id, mes);
         const sem = t.semaforo || MDY.semaforo(ind.id, v, estado, c);
         const cab = `<div class="cab"><div class="tit"><small>${MDY.CAMPANAS[c].kicker}</small>${ind.nombre} ${sem ? `<span class="pill ${sem}">${sem}</span>` : ''}</div>
           <label class="check"><input type="checkbox" data-incluir="${clave}" ${t.incluir ? 'checked' : ''} ${datos ? '' : 'disabled'}> Incluir lámina</label></div>`;
@@ -394,7 +398,7 @@
         if (ind.sinTextos) { html += `<div class="lam">${cab}<div class="cuerpo" style="grid-template-columns:1fr"><span class="muted">Lámina automática (gráfico + tabla), no requiere textos.</span></div></div>`; continue; }
         const area = (campo, et, val, edit, filas = 4) => `<div class="campo"><div class="et">${et} ${edit ? `<button class="mini" data-restaurar="${clave}" data-campo="${campo}">↺ usar sugerencia automática</button>` : (campo === 'origen' || campo === 'resultado' ? '<em>sugerencia automática</em>' : '')}</div>
           <textarea data-texto="${clave}" data-campo="${campo}" rows="${filas}">${esc(val)}</textarea></div>`;
-        html += `<div class="lam">${cab}<div class="cuerpo"><div class="kpis">${kpisHTML(c, ind.id, mes)}</div><div>
+        html += `<div class="lam">${cab}<div class="cuerpo"><div class="kpis">${kpisHTML(vista, c, ind.id, mes)}</div><div>
           ${area('origen', 'ORIGEN', t.origen, t.editado.origen, 5)}
           ${ind.id === 'ret' ? area('deteccion', 'DETECCIÓN', t.deteccion, false, 3) : ''}
           ${area('accion', 'ACCIÓN <em>(una por línea · se copia del mes anterior)</em>', t.accion, false, 4)}
@@ -408,7 +412,11 @@
     $('#laminas').innerHTML = html;
   }
   $('#selMes').addEventListener('change', (e) => { estado.corte.mes = e.target.value; estado.corte.fecha = MDY.ultimaFechaDatos(estado, estado.corte.mes) || estado.corte.fecha; guardar(); pintarRevisar(); });
-  $('#fechaCorte').addEventListener('change', (e) => { estado.corte.fecha = e.target.value; guardar(); });
+  $('#fechaCorte').addEventListener('change', (e) => {
+    estado.corte.fecha = e.target.value || null;
+    if (estado.corte.fecha && estado.corte.fecha.slice(0, 7) !== estado.corte.mes && mesesSeleccionables().includes(estado.corte.fecha.slice(0, 7))) estado.corte.mes = estado.corte.fecha.slice(0, 7);
+    guardar(); pintarRevisar();
+  });
   $('#selCamp').addEventListener('change', pintarRevisar);
   $('#laminas').addEventListener('input', (e) => {
     const mes = estado.corte.mes;
@@ -440,7 +448,7 @@
     const secciones = {}; $$('[data-sec]').forEach((x) => (secciones[x.dataset.sec] = x.checked));
     const btn = $('#btnGenerar'); btn.disabled = true; btn.textContent = 'Generando…';
     try {
-      const pptx = DECK.generar(window.PptxGenJS, estado, { mes, fechaCorte: estado.corte.fecha, assets: window.MDY_ASSETS || {}, proxCorte: estado.corte.proxCorte, secciones });
+      const pptx = DECK.generar(window.PptxGenJS, MDY.recortar(estado, estado.corte.fecha), { mes, fechaCorte: estado.corte.fecha, assets: window.MDY_ASSETS || {}, proxCorte: estado.corte.proxCorte, secciones });
       const buf = await pptx.write({ outputType: 'arraybuffer' });
       // Re-empaquetar sin entradas de carpeta (mejor compatibilidad con OneDrive/SharePoint)
       const zin = await JSZip.loadAsync(buf), zout = new JSZip();

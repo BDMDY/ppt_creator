@@ -211,12 +211,22 @@
       const ok = norm(r[iO]).includes('CUMPLIDA') ? 1 : 0;
       total++;
       a.g++; a.c += ok;
-      (a.dias[dia] = a.dias[dia] || { g: 0, c: 0 }); a.dias[dia].g++; a.dias[dia].c += ok;
+      // detalle por día (permite recortar a una fecha de corte)
+      const dd = (a.dias[dia] = a.dias[dia] || { g: 0, c: 0, as: {}, fr: {}, pe: {} });
+      dd.g++; dd.c += ok;
       const as = String(r[iA]).trim();
       (a.asesores[as] = a.asesores[as] || { g: 0, c: 0 }); a.asesores[as].g++; a.asesores[as].c += ok;
+      (dd.as[as] = dd.as[as] || [0, 0]); dd.as[as][0]++; dd.as[as][1] += ok;
       const h = serialHora(r[iF]);
-      if (h != null) { const f = h < 13 ? 'M' : h < 18 ? 'T' : 'N'; a.franjas[f].g++; a.franjas[f].c += ok; }
-      if (!ok) { const s = String(r[iS] || 'SIN SUBCLASE').trim(); a.perdidas[s] = (a.perdidas[s] || 0) + 1; }
+      if (h != null) {
+        const f = h < 13 ? 'M' : h < 18 ? 'T' : 'N';
+        a.franjas[f].g++; a.franjas[f].c += ok;
+        (dd.fr[f] = dd.fr[f] || [0, 0]); dd.fr[f][0]++; dd.fr[f][1] += ok;
+      }
+      if (!ok) {
+        const s = String(r[iS] || 'SIN SUBCLASE').trim();
+        a.perdidas[s] = (a.perdidas[s] || 0) + 1; dd.pe[s] = (dd.pe[s] || 0) + 1;
+      }
     }
     const partes = [];
     for (const c of Object.keys(agg)) for (const m of Object.keys(agg[c])) partes.push(`${CAMPANAS[c].nombre} ${mesLabel(m)}`);
@@ -285,6 +295,56 @@
       for (const m of Object.keys(d.ct)) if (m === mes) for (const k of Object.keys(d.ct[m].dias)) if (!max || k > max) max = k;
     }
     return max;
+  }
+
+  /**
+   * Devuelve una vista del estado con la información HASTA la fecha de corte (inclusive).
+   * - Diario, rellamadas y CT: se descartan los días posteriores.
+   * - Mes del corte: si hay detalle diario, el mes se recalcula con los días ≤ corte.
+   * - Meses posteriores, retención de meses posteriores y movimientos de headcount futuros: se descartan.
+   * Los textos/registros manuales se comparten (no se copian) para que las ediciones se guarden.
+   */
+  function recortar(estado, fechaCorte) {
+    if (!fechaCorte) return estado;
+    const mesCorte = fechaCorte.slice(0, 7);
+    const datos = {};
+    const avisos = [];
+    for (const c of Object.keys(CAMPANAS)) {
+      const d = estado.datos[c];
+      const diario = {}, rell = {}, mensual = {}, ct = {};
+      for (const [k, v] of Object.entries(d.diario)) if (k <= fechaCorte) diario[k] = v;
+      for (const [k, v] of Object.entries(d.rell)) if (k <= fechaCorte) rell[k] = v;
+      const hayDiarioMesCorte = Object.keys(diario).some((k) => k.startsWith(mesCorte));
+      for (const [k, v] of Object.entries(d.mensual)) {
+        if (k < mesCorte) mensual[k] = v;
+        else if (k === mesCorte && !hayDiarioMesCorte) {
+          mensual[k] = v;
+          if (Object.keys(d.diario).length) avisos.push(`${CAMPANAS[c].nombre}: no hay reporte diario de ${mesLargo(mesCorte)}; se usa el acumulado mensual completo.`);
+        }
+      }
+      for (const [m, a] of Object.entries(d.ct)) {
+        if (m < mesCorte) { ct[m] = a; continue; }
+        if (m > mesCorte) continue;
+        const dias = Object.keys(a.dias).filter((k) => k <= fechaCorte);
+        if (!dias.length) continue;
+        if (!a.dias[dias[0]].as) { ct[m] = a; avisos.push(`${CAMPANAS[c].nombre}: vuelve a cargar el reporte de oportunidades de ${mesLargo(m)} para poder recortarlo por fecha.`); continue; }
+        const n = nuevoAggCT();
+        for (const k of dias) {
+          const x = a.dias[k];
+          n.dias[k] = x; n.g += x.g; n.c += x.c;
+          for (const [as, [g, cc]] of Object.entries(x.as)) { (n.asesores[as] = n.asesores[as] || { g: 0, c: 0 }); n.asesores[as].g += g; n.asesores[as].c += cc; }
+          for (const [f, [g, cc]] of Object.entries(x.fr)) { n.franjas[f].g += g; n.franjas[f].c += cc; }
+          for (const [s, v] of Object.entries(x.pe)) n.perdidas[s] = (n.perdidas[s] || 0) + v;
+        }
+        ct[m] = n;
+      }
+      datos[c] = { mensual, diario, rell, ct };
+    }
+    const manual = Object.assign({}, estado.manual, {
+      retencion: Object.fromEntries(Object.entries(estado.manual.retencion).map(([c, r]) => [c, Object.fromEntries(Object.entries(r || {}).filter(([m]) => m <= mesCorte))])),
+      headcount: Object.fromEntries(Object.entries(estado.manual.headcount).map(([c, h]) => [c, Object.assign({}, h, { eventos: (h.eventos || []).filter((e) => !e.fecha || e.fecha <= fechaCorte) })])),
+    });
+    return Object.assign({}, estado, { datos, manual, avisosCorte: [...new Set(avisos)] });
   }
 
   /* ------------------------------ agregaciones ------------------------------ */
@@ -646,7 +706,7 @@
   const api = {
     CAMPANAS, CONFIG_DEFECTO, INDICADORES, MESES, DIAS,
     util: { pct, pp, seg, num, signo, mesLabel, mesLargo, mesNombre, mesAnterior, ddmm, ddmmyyyy, dow, semanaDe, rangoSemana, serialAISO, norm },
-    interpretarLibro, estadoVacio, incorporar, mesesDisponibles, ultimaFechaDatos,
+    interpretarLibro, estadoVacio, incorporar, mesesDisponibles, ultimaFechaDatos, recortar,
     opsMes, opsDiasMes, opsSemanas, serieMensual, sumarOps,
     rellMes, rellDias, rellSemanas, rellSerieMensual,
     ctMes, ctSemanas, ctSerieMensual, ctAsesores, mediana,
