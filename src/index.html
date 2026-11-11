@@ -95,10 +95,14 @@
         <label class="check"><input type="checkbox" data-sec="compromisos" checked> Compromisos</label>
         <label class="check"><input type="checkbox" data-sec="casos" checked> Casos operativos</label>
       </div>
+      <div class="fila" style="justify-content:center;margin:-4px 0 14px">
+        <label class="check"><input type="checkbox" id="chkNotas" checked> Incluir guion de exposición en las notas del orador</label>
+      </div>
       <div class="fila" style="justify-content:center;margin-bottom:18px">
         <label>Próximo corte (lámina de compromisos) <input type="text" id="proxCorte" placeholder="semana del 16 de noviembre" style="width:260px"></label>
       </div>
       <button class="b grande" id="btnGenerar">⬇ Descargar PPT</button>
+      <button class="b2 grande" id="btnGuion" style="margin-left:10px">🎤 Descargar guion de exposición</button>
       <p class="muted" style="margin-top:12px">Se descarga un .pptx editable: gráficos nativos de PowerPoint (clic derecho → Editar datos).</p>
     </div>
     <div class="card">
@@ -119,6 +123,7 @@
 <script>/*__LIBS__*/</script>
 <script>/*__ASSETS__*/</script>
 <script>/*__CORE__*/</script>
+<script>/*__COACH__*/</script>
 <script>/*__DECK__*/</script>
 <script>/*__APP__*/</script>
 </body>

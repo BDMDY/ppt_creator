@@ -352,6 +352,25 @@
     return '';
   }
 
+  function coachHTML(vista, c, ind, mes, t, clave) {
+    const C = window.MDY_COACH; if (!C) return '';
+    const p = C.pitch(vista, c, ind, mes, t);
+    const acc = C.accionesSugeridas(vista, c, ind, mes);
+    if (!p && !acc.length) return '';
+    const actuales = String(t.accion || '').split('\n').map((x) => x.trim());
+    const sug = acc.map((a, i) => {
+      const usada = actuales.includes(a.texto);
+      return `<div class="sug ${usada ? 'usada' : ''}"><div style="flex:1">${esc(a.texto)}<small>${esc(a.porque)}</small></div>
+        <button class="b2" style="padding:4px 9px;font-size:12px" data-agregar="${clave}" data-i="${i}" ${usada ? 'disabled' : ''}>${usada ? '✔ En el plan' : '+ Agregar'}</button></div>`;
+    }).join('');
+    const pit = p ? `<div class="pitch"><b>Escenario:</b> <span class="pill ${p.color}">${esc(p.nombreEscenario)}</span>
+        <div class="msg" style="margin-top:4px">${esc(p.mensaje)}</div>
+        <ol>${p.pasos.map((x) => `<li>${esc(x)}</li>`).join('')}</ol>
+        <div class="muted"><b>Preguntas probables:</b> ${p.preguntas.map(esc).join(' · ')}</div></div>` : '';
+    return `<div class="coach"><div><h4>ACCIONES SUGERIDAS</h4>${sug || '<span class="muted">Sin sugerencias para este escenario.</span>'}</div>
+      <div><h4>CÓMO EXPONERLO (va en las notas del orador)</h4>${pit}</div></div>`;
+  }
+
   function pintarRevisar() {
     const meses = mesesSeleccionables();
     const sel = $('#selMes');
@@ -406,7 +425,7 @@
           <div class="campo"><div class="et">CIERRE DE LÁMINA <em>(opcional)</em></div><div class="cierre-row">
             <select data-texto="${clave}" data-campo="cierreTipo">${['PARCIAL', 'REPLANTEAMIENTO', 'IMPACTO', 'PROYECCIÓN', 'LOGRO'].map((x) => `<option ${x === t.cierreTipo ? 'selected' : ''}>${x}</option>`).join('')}</select>
             <input type="text" data-texto="${clave}" data-campo="cierreTexto" value="${esc(t.cierreTexto)}" placeholder="Conclusión de la semana para esta lámina"></div></div>
-        </div></div></div>`;
+        </div>${coachHTML(vista, c, ind.id, mes, t, clave)}</div></div>`;
       }
     }
     $('#laminas').innerHTML = html;
@@ -431,7 +450,17 @@
   $('#laminas').addEventListener('click', (e) => {
     const b = e.target.closest('[data-restaurar]');
     if (b) { delete textoGuardado(estado.corte.mes, b.dataset.restaurar)[b.dataset.campo]; guardar(); pintarRevisar(); return; }
-    if (e.target.closest('[data-restaurar-mejoro]')) { delete estado.manual.resumen[estado.corte.mes]; guardar(); pintarRevisar(); }
+    if (e.target.closest('[data-restaurar-mejoro]')) { delete estado.manual.resumen[estado.corte.mes]; guardar(); pintarRevisar(); return; }
+    const ag = e.target.closest('[data-agregar]');
+    if (ag) {
+      const [c, ind] = ag.dataset.agregar.split('.');
+      const vista = MDY.recortar(estado, estado.corte.fecha);
+      const a = window.MDY_COACH.accionesSugeridas(vista, c, ind, estado.corte.mes)[+ag.dataset.i];
+      const t = MDY.textosLamina(estado, estado.corte.mes, c, ind);
+      const g = textoGuardado(estado.corte.mes, ag.dataset.agregar);
+      g.accion = [String(t.accion || '').trim(), a.texto].filter(Boolean).join('\n');
+      guardar(); pintarRevisar(); aviso('Acción agregada al plan');
+    }
   });
 
   /* ------------------------------ 4. descargar ------------------------------ */
@@ -448,7 +477,7 @@
     const secciones = {}; $$('[data-sec]').forEach((x) => (secciones[x.dataset.sec] = x.checked));
     const btn = $('#btnGenerar'); btn.disabled = true; btn.textContent = 'Generando…';
     try {
-      const pptx = DECK.generar(window.PptxGenJS, MDY.recortar(estado, estado.corte.fecha), { mes, fechaCorte: estado.corte.fecha, assets: window.MDY_ASSETS || {}, proxCorte: estado.corte.proxCorte, secciones });
+      const pptx = DECK.generar(window.PptxGenJS, MDY.recortar(estado, estado.corte.fecha), { notas: $('#chkNotas').checked, mes, fechaCorte: estado.corte.fecha, assets: window.MDY_ASSETS || {}, proxCorte: estado.corte.proxCorte, secciones });
       const buf = await pptx.write({ outputType: 'arraybuffer' });
       // Re-empaquetar sin entradas de carpeta (mejor compatibilidad con OneDrive/SharePoint)
       const zin = await JSZip.loadAsync(buf), zout = new JSZip();
@@ -460,6 +489,14 @@
       aviso('Presentación descargada');
     } catch (e) { console.error(e); aviso('Error al generar: ' + e.message); }
     btn.disabled = false; btn.textContent = '⬇ Descargar PPT';
+  });
+  $('#btnGuion').addEventListener('click', () => {
+    const mes = estado.corte.mes || mesesSeleccionables()[0];
+    if (!mes) { aviso('Primero carga los reportes'); return; }
+    const html = window.MDY_COACH.guionHTML(MDY.recortar(estado, estado.corte.fecha), mes, estado.corte.fecha, window.PULSO_CREDITOS);
+    const f = estado.corte.fecha ? estado.corte.fecha.split('-').reverse().slice(0, 2).join('.') : U.mesLabel(mes);
+    descargar(new Blob([html], { type: 'text/html' }), `GUION_EXPOSICION_${f}.html`);
+    aviso('Guion descargado (ábrelo en el navegador o imprímelo en PDF)');
   });
   function descargar(blob, nombre) {
     const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = nombre;

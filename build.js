@@ -27,6 +27,7 @@ const partes = {
   '/*__LIBS__*/': seguro(libs),
   '/*__ASSETS__*/': assets,
   '/*__CORE__*/': seguro(r('src/core.js')),
+  '/*__COACH__*/': seguro(r('src/coach.js')),
   '/*__DECK__*/': seguro(r('src/deck.js')),
   '/*__APP__*/': seguro(r('src/app.js')),
 };

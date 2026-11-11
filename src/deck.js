@@ -5,6 +5,8 @@
 (function (root) {
   'use strict';
   const MDY = root.MDY || (typeof require !== 'undefined' ? require('./core.js') : null);
+  const COACH = () => root.MDY_COACH || (typeof require !== 'undefined' ? require('./coach.js') : null);
+  let notasActivas = true;
   const U = MDY.util;
 
   const C = {
@@ -322,6 +324,7 @@
     if (ind === 'ret') secciones.push({ etiqueta: 'DETECCIÓN', texto: t.deteccion });
     secciones.push({ etiqueta: 'ACCIÓN', texto: t.accion, siempre: true }, { etiqueta: 'RESULTADO', texto: t.resultado, siempre: true });
     panel(s, secciones, 1.08, t.cierreTexto ? 6.1 : 6.95);
+    if (notasActivas && COACH()) { const n = COACH().notasLamina(COACH().pitch(estado, camp, ind, mes, t)); if (n) s.addNotes(n); }
     cierre(s, t.cierreTipo, t.cierreTexto);
     pie(s, pieTxt);
   }
@@ -477,6 +480,7 @@
   /* ------------------------------ ensamblado ------------------------------ */
   function generar(PptxGenJS, estado, opciones) {
     const { mes, fechaCorte, assets = {}, proxCorte } = opciones;
+    notasActivas = opciones.notas !== false;
     const pptx = new PptxGenJS();
     pptx.layout = 'LAYOUT_WIDE';
     pptx.author = 'MDY Customer Experience';
