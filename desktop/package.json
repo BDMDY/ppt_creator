@@ -1,7 +1,7 @@
 {
   "name": "pulso-cx",
   "productName": "Pulso CX",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Pulso CX - Armado de presentación de indicadores",
   "author": "Piero Marcelo Mavila Peña",
   "main": "main.js",
@@ -16,7 +16,8 @@
     "files": [
       "main.js",
       "app.html",
-      "build/icon.png"
+      "build/icon.png",
+      "actualizacion.js"
     ],
     "directories": {
       "output": "release"

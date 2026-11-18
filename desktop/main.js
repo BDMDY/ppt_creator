@@ -1,6 +1,7 @@
 // Pulso CX — envoltorio de escritorio (portable para Windows)
 const { app, BrowserWindow, shell } = require('electron');
 const path = require('path');
+const { elegirHtml } = require('./actualizacion');
 
 // Modo portable: los datos se guardan junto al .exe (carpeta "PulsoCX_datos"),
 // así la información viaja con el programa (USB, carpeta de red, etc.).
@@ -23,7 +24,11 @@ function crearVentana() {
   // Enlaces externos: al navegador; nunca navegar fuera de la app
   win.webContents.setWindowOpenHandler(({ url }) => { if (/^https?:/.test(url)) shell.openExternal(url); return { action: 'deny' }; });
   win.webContents.on('will-navigate', (e) => e.preventDefault());
-  win.loadFile(path.join(__dirname, 'app.html'));
+  // Actualizaciones: basta con dejar un PulsoCX.html más nuevo junto al .exe
+  const dirExe = process.env.PORTABLE_EXECUTABLE_DIR || path.dirname(process.execPath);
+  const elegido = elegirHtml(path.join(__dirname, 'app.html'), [dirExe, app.getPath('userData')]);
+  win.setTitle(`Pulso CX v${elegido.version}`);
+  win.loadFile(elegido.archivo);
 }
 
 app.whenReady().then(crearVentana);
