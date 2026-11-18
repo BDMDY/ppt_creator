@@ -480,9 +480,7 @@
       const pptx = DECK.generar(window.PptxGenJS, MDY.recortar(estado, estado.corte.fecha), { notas: false, mes, fechaCorte: estado.corte.fecha, assets: window.MDY_ASSETS || {}, proxCorte: estado.corte.proxCorte, secciones });
       const buf = await pptx.write({ outputType: 'arraybuffer' });
       // Re-empaquetar sin entradas de carpeta (mejor compatibilidad con OneDrive/SharePoint)
-      const zin = await JSZip.loadAsync(buf), zout = new JSZip();
-      const nombres = Object.keys(zin.files).filter((n) => !zin.files[n].dir);
-      for (const n of nombres) zout.file(n, await zin.files[n].async('uint8array'), { createFolders: false });
+      const zout = await DECK.compatibilizar(await JSZip.loadAsync(buf), JSZip);
       const blob = await zout.generateAsync({ type: 'blob', compression: 'DEFLATE', mimeType: 'application/vnd.openxmlformats-officedocument.presentationml.presentation' });
       const f = estado.corte.fecha ? estado.corte.fecha.split('-').reverse().slice(0, 2).join('.') : U.mesLabel(mes);
       descargar(blob, `PRESENTACION_MDY_${f}.pptx`);

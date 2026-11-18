@@ -107,7 +107,19 @@
   }
 
   // Línea real (con etiquetas) + línea objetivo (sin etiquetas)
-  function graficoLinea(pptx, s, box, etiquetas, valores, objetivo, nombre, fmt, rango) {
+  // Compatibilidad con Google Slides: los % se guardan como puntos (55.9) con formato 0.0"%",
+  // así el valor se lee bien aunque el visor ignore el formato numérico.
+  function escala(fmt) {
+    if (/%/.test(fmt) && !/"%"/.test(fmt)) return { k: 100, fmt: fmt.replace('%', '"%"') };
+    return { k: 1, fmt };
+  }
+  const redondear = (v, k) => (v == null || isNaN(v) ? null : Math.round(v * k * 100) / 100);
+
+  function graficoLinea(pptx, s, box, etiquetas, valores, objetivo, nombre, fmt0, rango) {
+    const { k, fmt } = escala(fmt0);
+    valores = valores.map((v) => redondear(v, k));
+    if (objetivo != null) objetivo = redondear(objetivo, k);
+    if (rango) rango = { min: rango.min != null ? rango.min * k : null, max: rango.max != null ? rango.max * k : null };
     marco(s, box.x, box.y, box.w, box.h);
     const pad = 0.05;
     const datosReal = [{ name: nombre, labels: etiquetas, values: valores.map((v) => (v == null ? null : v)) }];
@@ -122,7 +134,9 @@
     s.addChart(tipos, opts);
   }
 
-  function graficoBarras(pptx, s, box, etiquetas, series, fmt, colores, extra = {}) {
+  function graficoBarras(pptx, s, box, etiquetas, series, fmt0, colores, extra = {}) {
+    const { k, fmt } = escala(fmt0);
+    series = series.map((x) => ({ ...x, valores: x.valores.map((v) => redondear(v, k)) }));
     marco(s, box.x, box.y, box.w, box.h);
     const pad = 0.05;
     s.addChart(pptx.ChartType.bar, series.map((x) => ({ name: x.nombre, labels: etiquetas, values: x.valores })), Object.assign(opcionesLinea(fmt, {
@@ -308,9 +322,9 @@
       if (serie.length) {
         const et = serie.map((x) => U.mesLabel(x.mes));
         s.addChart(pptx.ChartType.line, [
-          { name: 'Retención', labels: et, values: serie.map((x) => x.ret) },
-          { name: 'Cancelación', labels: et, values: serie.map((x) => (x.canc == null ? null : x.canc)) },
-        ], opcionesLinea('0.0%', { x: box.x + 0.05, y: box.y + 0.05, w: box.w - 0.1, h: box.h - 0.1, chartColors: [C.verde, C.objetivo], showValue: true, dataLabelPosition: 't', dataLabelFontSize: 8, dataLabelColor: C.texto, lineDataSymbol: 'circle', valAxisMinVal: 0, valAxisMaxVal: 1 }));
+          { name: 'Retención', labels: et, values: serie.map((x) => redondear(x.ret, 100)) },
+          { name: 'Cancelación', labels: et, values: serie.map((x) => redondear(x.canc, 100)) },
+        ], opcionesLinea('0.0"%"', { x: box.x + 0.05, y: box.y + 0.05, w: box.w - 0.1, h: box.h - 0.1, chartColors: [C.verde, C.objetivo], showValue: true, dataLabelPosition: 't', dataLabelFontSize: 8, dataLabelColor: C.texto, lineDataSymbol: 'circle', valAxisMinVal: 0, valAxisMaxVal: 100 }));
       }
     } else if (ind === 'hc') {
       cabecera(s, K, 'Headcount');
@@ -517,7 +531,28 @@
     return false;
   }
 
-  const api = { generar, tieneDatos, mejorasAuto, COLOR_EVENTO };
+  /**
+   * Ajusta el .pptx ya generado (JSZip) para visores como Google Slides:
+   * - copia el formato numérico de las etiquetas a la caché de datos del gráfico (numCache),
+   *   que es la que leen algunos visores en lugar del formato de la etiqueta;
+   * - elimina las entradas de carpeta del zip.
+   */
+  async function compatibilizar(zin, JSZipCtor) {
+    const zout = new JSZipCtor();
+    for (const n of Object.keys(zin.files)) {
+      const f = zin.files[n];
+      if (f.dir) continue;
+      if (/^ppt\/charts\/chart\d+\.xml$/.test(n)) {
+        let x = await f.async('string');
+        const m = x.match(/<c:numFmt formatCode="([^"]+)" sourceLinked="0"\/>/);
+        if (m) x = x.replace(/<c:numCache>(\s*)<c:formatCode>General<\/c:formatCode>/g, `<c:numCache>$1<c:formatCode>${m[1]}</c:formatCode>`);
+        zout.file(n, x, { createFolders: false });
+      } else zout.file(n, await f.async('uint8array'), { createFolders: false });
+    }
+    return zout;
+  }
+
+  const api = { generar, tieneDatos, mejorasAuto, compatibilizar, COLOR_EVENTO };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   root.MDY_DECK = api;
 })(typeof window !== 'undefined' ? window : globalThis);
